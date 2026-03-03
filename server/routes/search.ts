@@ -1,0 +1,147 @@
+import { Router } from 'express';
+import { Pinecone } from '@pinecone-database/pinecone';
+import { supabase } from '../lib/supabase';
+import { ChatOpenAI } from '@langchain/openai';
+import { PromptTemplate } from '@langchain/core/prompts';
+import { StringOutputParser } from '@langchain/core/output_parsers';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
+const router = Router();
+const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
+
+// POST /api/search - Similarity search
+router.post('/', async (req, res) => {
+    try {
+        const { query, product = '소니 WH-1000XM5' } = req.body;
+
+        if (!query) {
+            return res.status(400).json({ success: false, error: 'Query is required' });
+        }
+
+        // Embed the query
+        const queryEmbedding = await pc.inference.embed({
+            model: 'llama-text-embed-v2',
+            inputs: [query],
+            parameters: { inputType: 'query' }
+        });
+
+        const queryVector = queryEmbedding.data[0].values as number[];
+
+        // Search Pinecone
+        const index = pc.index('review-chatbot');
+        const results = await index.namespace('reviews').query({
+            vector: queryVector,
+            topK: 5,
+            includeMetadata: true,
+            filter: { product }
+        });
+
+        // Log search to Supabase
+        try {
+            await supabase.from('search_logs').insert({
+                query,
+                results_count: results.matches?.length || 0,
+            });
+        } catch (logError) {
+            console.warn('Failed to log search to Supabase:', logError);
+        }
+
+        res.json({
+            success: true,
+            results: results.matches?.map(m => ({
+                score: m.score,
+                text: m.metadata?.text,
+                metadata: m.metadata
+            })) || []
+        });
+    } catch (error: any) {
+        console.error('Search error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// POST /api/search/chat - Chat with RAG context
+router.post('/chat', async (req, res) => {
+    try {
+        const { message, history, product = '소니 WH-1000XM5' } = req.body;
+
+        if (!message) {
+            return res.status(400).json({ success: false, error: 'Message is required' });
+        }
+
+        // Embed the message for search
+        const queryEmbedding = await pc.inference.embed({
+            model: 'llama-text-embed-v2',
+            inputs: [message],
+            parameters: { inputType: 'query' }
+        });
+
+        const queryVector = queryEmbedding.data[0].values as number[];
+
+        // Search Pinecone for relevant context
+        const index = pc.index('review-chatbot');
+        const results = await index.namespace('reviews').query({
+            vector: queryVector,
+            topK: 5,
+            includeMetadata: true,
+            filter: { product }
+        });
+
+        // Build context from search results
+        const context = results.matches
+            ?.map(m => m.metadata?.text || '')
+            .filter(Boolean)
+            .join('\n\n---\n\n');
+
+        // Generate response using OpenAI
+        const llm = new ChatOpenAI({
+            openAIApiKey: process.env.OPENAI_API_KEY,
+            modelName: 'gpt-5-nano',
+        });
+
+        const promptTemplate = PromptTemplate.fromTemplate(`
+당신은 상품 리뷰를 바탕으로 사용자의 질문에 답변하는 친절한 AI 어시스턴트입니다.
+아래 제공된 '관련 리뷰 문맥(Context)' 정보만을 사용하여 질문에 답변하세요.
+문맥에 충분한 정보가 없다면 "제공된 리뷰 데이터에서는 해당 정보를 찾을 수 없습니다."라고 답변하세요.
+
+--- 관련 리뷰 문맥 (Context) ---
+{context}
+
+--- 질문 ---
+{question}
+
+답변:
+`);
+
+        const chain = promptTemplate.pipe(llm).pipe(new StringOutputParser());
+
+        let answer = '';
+        if (context) {
+            answer = await chain.invoke({
+                context: context,
+                question: message
+            });
+        } else {
+            answer = '죄송합니다, 관련된 리뷰를 찾지 못했습니다. 다른 질문을 해보시겠어요?';
+        }
+
+        // Log to Supabase
+        try {
+            await supabase.from('search_logs').insert({
+                query: message,
+                results_count: results.matches?.length || 0,
+            });
+        } catch (logError) {
+            console.warn('Failed to log to Supabase:', logError);
+        }
+
+        res.json({ success: true, answer, context_count: results.matches?.length || 0 });
+    } catch (error: any) {
+        console.error('Chat error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+export default router;
