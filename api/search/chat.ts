@@ -42,8 +42,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
 
         // Build context from search results
-        const context = results.matches
-            ?.map((m: any) => m.metadata?.text || '')
+        const context = (results.matches || [])
+            .map((m: any) => m.metadata?.text || '')
             .filter(Boolean)
             .join('\n\n---\n\n');
 
