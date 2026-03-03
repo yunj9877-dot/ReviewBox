@@ -1,4 +1,3 @@
-import React from 'react';
 import type { ChatHistoryItem } from '../App';
 
 interface SidebarProps {
@@ -10,7 +9,7 @@ interface SidebarProps {
     onSelectChat?: (id: number) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ onIndexData, isIndexing, onNewChat, chatHistory = [], activeChatId, onSelectChat }) => {
+const Sidebar = ({ onIndexData, isIndexing, onNewChat, chatHistory = [], activeChatId, onSelectChat }: SidebarProps) => {
     return (
         <aside className="w-80 h-full border-r border-border-light bg-surface-light flex flex-col flex-shrink-0 transition-all duration-300">
             <div className="p-5 border-b border-border-light/50">
@@ -56,8 +55,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onIndexData, isIndexing, onNewChat, c
                             key={item.id}
                             onClick={() => onSelectChat?.(item.id)}
                             className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg group transition-colors ${isActive
-                                    ? 'bg-white shadow-sm border border-border-light/60 text-text-primary'
-                                    : 'hover:bg-gray-100 text-text-secondary hover:text-text-primary'
+                                ? 'bg-white shadow-sm border border-border-light/60 text-text-primary'
+                                : 'hover:bg-gray-100 text-text-secondary hover:text-text-primary'
                                 }`}
                         >
                             <span className={`material-symbols-outlined text-[20px] group-hover:text-primary transition-colors ${isActive ? 'text-primary' : 'text-text-secondary'}`}>
