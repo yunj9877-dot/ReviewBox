@@ -26,7 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             parameters: { inputType: 'query' }
         });
 
-        const queryVector = queryEmbedding.data[0].values as number[];
+        const queryVector = (queryEmbedding.data[0] as any).values as number[];
 
         const index = pc.index('review-chatbot');
         const results = await index.namespace('reviews').query({

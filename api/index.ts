@@ -74,7 +74,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }
                 return {
                     id: `review-${i + idx}-${Date.now()}`,
-                    values: emb.values as number[],
+                    values: (emb as any).values as number[],
                     metadata: cleanMeta
                 };
             });

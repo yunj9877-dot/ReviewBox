@@ -30,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             parameters: { inputType: 'query' }
         });
 
-        const queryVector = queryEmbedding.data[0].values as number[];
+        const queryVector = (queryEmbedding.data[0] as any).values as number[];
 
         // Search Pinecone for relevant context
         const index = pc.index('review-chatbot');
@@ -43,7 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Build context from search results
         const context = results.matches
-            ?.map(m => m.metadata?.text || '')
+            ?.map((m: any) => m.metadata?.text || '')
             .filter(Boolean)
             .join('\n\n---\n\n');
 
