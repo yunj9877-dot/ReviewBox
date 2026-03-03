@@ -24,11 +24,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Embed the message for search
-        const queryEmbedding = await pc.inference.embed({
-            model: 'llama-text-embed-v2',
-            inputs: [message],
-            parameters: { inputType: 'query' }
-        });
+        const queryEmbedding = await pc.inference.embed(
+            'llama-text-embed-v2',
+            [message],
+            { inputType: 'query' }
+        );
 
         const queryVector = (queryEmbedding.data[0] as any).values as number[];
 
