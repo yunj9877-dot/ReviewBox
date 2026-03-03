@@ -24,24 +24,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Embed the message for search
-        let queryVector: number[];
-        try {
-            const queryEmbedding = await pc.inference.embed(
-                'llama-text-embed-v2',
-                [message],
-                { inputType: 'query' }
-            );
-            // Handle both possible response formats
-            const firstEmbed = Array.isArray(queryEmbedding) ? queryEmbedding[0] : (queryEmbedding as any)?.data?.[0] || queryEmbedding;
-            queryVector = (firstEmbed as any).values;
-            if (!queryVector) {
-                console.error('Embed response structure:', JSON.stringify(queryEmbedding).slice(0, 500));
-                return res.status(500).json({ success: false, error: 'Failed to get embedding vector' });
-            }
-        } catch (embedError: any) {
-            console.error('Embed error:', embedError);
-            return res.status(500).json({ success: false, error: 'Embedding failed: ' + embedError.message });
-        }
+        const queryEmbedding = await pc.inference.embed({
+            model: 'llama-text-embed-v2',
+            inputs: [message],
+            parameters: { inputType: 'query' }
+        });
+
+        const queryVector = (queryEmbedding.data[0] as any).values as number[];
 
         // Search Pinecone for relevant context
         const index = pc.index('review-chatbot');
@@ -53,13 +42,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
 
         // Build context from search results
-        let context = '';
-        if (results && results.matches && Array.isArray(results.matches)) {
-            context = results.matches
-                .map((m: any) => m.metadata?.text || '')
-                .filter(Boolean)
-                .join('\n\n---\n\n');
-        }
+        const context = results.matches
+            ?.map((m: any) => m.metadata?.text || '')
+            .filter(Boolean)
+            .join('\n\n---\n\n');
 
         // Generate response using OpenAI
         const llm = new ChatOpenAI({

@@ -12,7 +12,6 @@ export interface ChatHistoryItem {
 
 function App() {
   const [view, setView] = useState<'chat' | 'analysis'>('chat');
-  const [isIndexing, setIsIndexing] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
   const [activeChatId, setActiveChatId] = useState<number | null>(null);
@@ -51,29 +50,10 @@ function App() {
     setResetKey(prev => prev + 1);
   };
 
-  const handleIndexData = async () => {
-    setIsIndexing(true);
-    try {
-      const response = await fetch('/api/index', { method: 'POST' });
-      const data = await response.json();
-      if (data.success) {
-        alert('샘플 데이터 인덱싱 완료!');
-      } else {
-        alert('인덱싱 실패: ' + data.error);
-      }
-    } catch (error) {
-      alert('에러 발생: ' + error);
-    } finally {
-      setIsIndexing(false);
-    }
-  };
-
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background-light text-text-primary">
       {view === 'chat' && (
         <Sidebar
-          onIndexData={handleIndexData}
-          isIndexing={isIndexing}
           onNewChat={handleNewChat}
           chatHistory={chatHistory}
           activeChatId={activeChatId}

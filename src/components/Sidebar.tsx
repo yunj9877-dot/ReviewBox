@@ -1,15 +1,13 @@
 import type { ChatHistoryItem } from '../App';
 
 interface SidebarProps {
-    onIndexData?: () => void;
-    isIndexing?: boolean;
     onNewChat?: () => void;
     chatHistory?: ChatHistoryItem[];
     activeChatId?: number | null;
     onSelectChat?: (id: number) => void;
 }
 
-const Sidebar = ({ onIndexData, isIndexing, onNewChat, chatHistory = [], activeChatId, onSelectChat }: SidebarProps) => {
+const Sidebar = ({ onNewChat, chatHistory = [], activeChatId, onSelectChat }: SidebarProps) => {
     return (
         <aside className="w-80 h-full border-r border-border-light bg-surface-light flex flex-col flex-shrink-0 transition-all duration-300">
             <div className="p-5 border-b border-border-light/50">
@@ -29,16 +27,6 @@ const Sidebar = ({ onIndexData, isIndexing, onNewChat, chatHistory = [], activeC
                     className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-blue-600 text-white font-medium py-3 px-4 rounded-lg transition-colors shadow-sm active:scale-[0.98]">
                     <span className="material-symbols-outlined text-[20px]">add</span>
                     <span>새 대화</span>
-                </button>
-                <button
-                    onClick={onIndexData}
-                    disabled={isIndexing}
-                    className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-2.5 px-4 rounded-lg transition-colors shadow-sm active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                >
-                    <span className="material-symbols-outlined text-[18px]">
-                        {isIndexing ? 'sync' : 'database'}
-                    </span>
-                    {isIndexing ? '인덱싱 중...' : '샘플 데이터 인덱싱'}
                 </button>
             </div>
             <nav className="flex-1 overflow-y-auto px-2 space-y-1">
